@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<title>Rosenmund Reaction Simulator</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#1f2937;
+    font-family:Arial,Helvetica,sans-serif;
+    color:white;
+    overflow:hidden;
+}
+
+h1{
+    text-align:center;
+    margin-top:10px;
+}
+
+#ui{
+    position:absolute;
+    left:20px;
+    top:20px;
+    z-index:10;
+}
+
+button{
+    padding:10px 18px;
+    margin:4px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:15px;
+}
+
+button:hover{
+    opacity:0.9;
+}
+
+#progressContainer{
+    width:260px;
+    height:20px;
+    background:#555;
+    border-radius:10px;
+    margin-top:12px;
+}
+
+#progress{
+    width:0%;
+    height:100%;
+    background:limegreen;
+    border-radius:10px;
+}
+
+canvas{
+    display:block;
+}
+
+</style>
+
+</head>
+<body>
+
+<h1>Rosenmund Reaction Simulation</h1>
+
+<div id="ui">
+
+<button id="startBtn">Start</button>
+<button id="pauseBtn">Pause</button>
+<button id="resetBtn">Reset</button>
+
+<div id="progressContainer">
+<div id="progress"></div>
+</div>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+reactor={
+x:250,
+y:90,
+w:900,
+h:600
+};
+
+catalyst={
+x:reactor.x,
+y:reactor.y+reactor.h-70,
+w:reactor.w,
+h:70
+};
+
+}
+
+window.onresize=resize;
+resize();
+
+let molecules=[];
+let running=false;
+
+let reactionCount=0;
+let totalAcid=12;
+
+class Molecule{
+
+constructor(type){
+
+this.type=type;
+
+this.x=reactor.x+40+Math.random()*(reactor.w-80);
+this.y=reactor.y+40+Math.random()*(reactor.h-180);
+
+this.vx=(Math.random()-0.5)*1.4;
+this.vy=(Math.random()-0.5)*1.4;
+
+this.radius=16;
+
+}
+
+move(){
+
+    this.x+=this.vx;
+    this.y+=this.vy;
+
+    this.vx+=(Math.random()-0.5)*0.05;
+    this.vy+=(Math.random()-0.5)*0.05;
+
+    let speed=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+
+    if(speed>2){
+        this.vx*=0.95;
+        this.vy*=0.95;
+    }
+
+    if(this.x<reactor.x+this.radius){
+        this.x=reactor.x+this.radius;
+        this.vx*=-1;
+    }
+
+    if(this.x>reactor.x+reactor.w-this.radius){
+        this.x=reactor.x+reactor.w-this.radius;
+        this.vx*=-1;
+    }
+
+    if(this.y<reactor.y+this.radius){
+        this.y=reactor.y+this.radius;
+        this.vy*=-1;
+    }
+
+    if(this.y>catalyst.y-this.radius){
+
+        this.y=catalyst.y-this.radius;
+
+        if(this.type=="acid"){
+            this.vx*=0.4;
+            this.vy=0;
+        }else{
+            this.vy*=-1;
+        }
+
+    }
+
+}
+
+draw(){
+
+ctx.beginPath();
+
+if(this.type=="acid"){
+
+ctx.fillStyle="#4fc3f7";
+
+}else if(this.type=="hydrogen"){
+
+ctx.fillStyle="#ffffff";
+
+}else if(this.type=="aldehyde"){
+
+ctx.fillStyle="#00ff88";
+
+}else{
+
+ctx.fillStyle="#ff5252";
+
+}
+
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+
+ctx.fill();
+
+ctx.fillStyle="black";
+ctx.font="12px Arial";
+ctx.textAlign="center";
+ctx.textBaseline="middle";
+
+if(this.type=="acid")
+ctx.fillText("RCOCl",this.x,this.y);
+
+if(this.type=="hydrogen")
+ctx.fillText("H₂",this.x,this.y);
+
+if(this.type=="aldehyde")
+ctx.fillText("RCHO",this.x,this.y);
+
+if(this.type=="hcl")
+ctx.fillText("HCl",this.x,this.y);
+
+}
+
+}
+
+function createMolecules(){
+
+molecules=[];
+
+for(let i=0;i<12;i++){
+
+molecules.push(new Molecule("acid"));
+
+}
+
+for(let i=0;i<20;i++){
+
+molecules.push(new Molecule("hydrogen"));
+
+}
+
+}
+
+createMolecules();
+
+function drawReactor(){
+
+ctx.strokeStyle="#9be7ff";
+ctx.lineWidth=6;
+
+ctx.strokeRect(
+reactor.x,
+reactor.y,
+reactor.w,
+reactor.h
+);
+
+ctx.fillStyle="rgba(0,180,255,0.05)";
+
+ctx.fillRect(
+reactor.x,
+reactor.y,
+reactor.w,
+reactor.h
+);
+
+ctx.fillStyle="#777";
+
+ctx.fillRect(
+catalyst.x,
+catalyst.y,
+catalyst.w,
+catalyst.h
+);
+
+ctx.fillStyle="white";
+ctx.font="18px Arial";
+
+ctx.fillText(
+"Pd / BaSO₄ Catalyst",
+reactor.x+20,
+catalyst.y+40
+);
+
+}
+
+function animate(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+drawReactor();
+
+for(let m of molecules){
+
+if(running)
+m.move();
+
+m.draw();
+
+}
+
+requestAnimationFrame(animate);
+
+}
+
+animate();
+
+document.getElementById("startBtn").onclick=()=>{
+
+running=true;
+
+}
+
+document.getElementById("pauseBtn").onclick=()=>{
+
+running=false;
+
+}
+
+document.getElementById("resetBtn").onclick=()=>{
+
+running=false;
+
+createMolecules();
+
+document.getElementById("progress").style.width="0%";
+
+}
+
+</script>
+
+</body>
+</html>
